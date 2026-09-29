@@ -1,0 +1,45 @@
+{
+  "id": "modelmesh",
+  "name": "ModelMesh",
+  "description": "Free-only AI routing across OpenRouter, Ollama, Groq and Google AI",
+  "author": "landnevermore",
+  "version": "0.1.0",
+  "category": "ai",
+  "mlhsm": {
+    "min_version": "0.1.0",
+    "api": "mlhsm-module/1"
+  },
+  "dependencies": [],
+  "optional_dependencies": [],
+  "permissions": [
+    {
+      "id": "network",
+      "description": "Ruft die konfigurierten AI-Provider (OpenRouter, Ollama, Groq, Google AI) ueber HTTPS auf.",
+      "required": true
+    },
+    {
+      "id": "credentials",
+      "description": "Liest Provider-Keys aus dem OS-Credential-Store. Schreibt sie nie in die Datenbank oder in Logs.",
+      "required": true
+    }
+  ],
+  "provides": [
+    "model-discovery",
+    "chat-completion",
+    "tool-calling",
+    "usage-tracking"
+  ],
+  "owned_paths": ["cache"],
+  "database_tables": [
+    "mm_models",
+    "mm_providers",
+    "mm_routing_decisions",
+    "mm_usage"
+  ],
+  "route_prefixes": ["/api/v1/modelmesh"],
+  "architecture": "in-process",
+  "platform": {
+    "os": ["linux", "windows"],
+    "arch": ["x86_64", "aarch64"]
+  }
+}

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/landnevermore/MLHSM-MODULES/main/schema/manifest.schema.json",
+  "title": "MLHSM module manifest",
+  "description": "One module. The field set extends the manifest MLHSM already has in hsm-core (id, name, description, version, provides, owned_paths, database_tables, route_prefixes, permissions) rather than replacing it, so a module declares the same things to a browser and to the host.",
+  "type": "object",
+  "required": ["id", "name", "description", "author", "version"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "minLength": 2,
+      "maxLength": 64
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "author": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "version": { "$ref": "#/$defs/semver" },
+    "icon": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._/-]+\\.(png|svg|webp)$"
+    },
+    "category": { "type": "string", "maxLength": 50 },
+
+    "mlhsm": {
+      "type": "object",
+      "required": ["min_version"],
+      "additionalProperties": false,
+      "properties": {
+        "min_version": { "$ref": "#/$defs/semver" },
+        "max_version": { "$ref": "#/$defs/semver" },
+        "api": { "type": "string", "pattern": "^mlhsm-module/[0-9]+$" }
+      }
+    },
+
+    "dependencies": {
+      "description": "Hard requirements. A module with an unmet dependency is shown as unavailable, never installed half-way.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/dependency" }
+    },
+    "optional_dependencies": {
+      "description": "Enhances the module when present. Never blocks installation.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/dependency" }
+    },
+
+    "permissions": {
+      "description": "What the module asks for. Displayed to the operator before installation. This phase records the declaration only - the runtime is compiled in, so nothing is granted by this file.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/permission" }
+    },
+
+    "provides": {
+      "description": "Capability labels, shown without loading the module.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 50 }
+    },
+    "owned_paths": {
+      "description": "Paths under data/modules/<id> the module owns. Declaring them keeps a later uninstall from guessing.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$" }
+    },
+    "database_tables": {
+      "description": "Tables the module owns. Listed so it is visible that disabling does NOT remove them.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9_]+$" }
+    },
+    "route_prefixes": {
+      "description": "API prefixes the module claims. A module may never claim a Core route.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^/api/v[0-9]+/[A-Za-z0-9/_-]+$" }
+    },
+
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "os": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["linux", "windows", "macos"] },
+          "minItems": 1
+        },
+        "arch": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["x86_64", "aarch64", "arm64"] },
+          "minItems": 1
+        }
+      }
+    },
+    "architecture": {
+      "description": "Free-form module shape, e.g. in-process or out-of-process. Kept open so a new runtime does not need a schema change.",
+      "type": "string",
+      "maxLength": 50
+    },
+
+    "artifact": {
+      "description": "The runnable artifact. Absent is valid and means metadata-only in this phase.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "enum": ["binary", "wasm", "archive", "container"] },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "size": { "type": "integer", "minimum": 0 },
+        "url": { "type": "string", "pattern": "^https://" }
+      }
+    },
+    "release": {
+      "type": "object",
+      "required": ["tag"],
+      "additionalProperties": false,
+      "properties": {
+        "tag": { "type": "string", "minLength": 1 },
+        "published_at": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string", "maxLength": 4000 }
+      }
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+    },
+    "dependency": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" },
+        "version": { "$ref": "#/$defs/semver" },
+        "optional": { "type": "boolean", "default": false }
+      }
+    },
+    "permission": {
+      "description": "A capability request. The vocabulary is closed on purpose: an unknown permission fails CI, so a typo cannot silently become a new grant.",
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": ["docker", "network", "filesystem", "credentials", "notifications", "system"]
+        },
+        "description": { "type": "string", "maxLength": 300 },
+        "required": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

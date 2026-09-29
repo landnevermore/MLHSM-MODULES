@@ -1,0 +1,43 @@
+{
+  "id": "mlgsm",
+  "name": "MLGSM (MLGameServerManager)",
+  "description": "Container-basierte Game-Server: Eggs, Templates, Konsole, Dateien, Backups",
+  "author": "landnevermore",
+  "version": "0.1.0",
+  "category": "gaming",
+  "mlhsm": {
+    "min_version": "0.1.0",
+    "api": "mlhsm-module/1"
+  },
+  "dependencies": [],
+  "optional_dependencies": [],
+  "permissions": [
+    {
+      "id": "docker",
+      "description": "Legt Container an, startet und stoppt Game-Server, verwaltet Engine-Volumes fuer die Spieldaten.",
+      "required": true
+    },
+    {
+      "id": "filesystem",
+      "description": "Liest und schreibt Eggs, Install-Fortschritt und Serverkonfiguration unter data/modules/mlgsm/.",
+      "required": true
+    }
+  ],
+  "provides": [
+    "server-lifecycle",
+    "eggs",
+    "templates",
+    "console",
+    "file-manager",
+    "port-management",
+    "backups"
+  ],
+  "owned_paths": ["eggs", "installs", "servers.json"],
+  "database_tables": ["game_servers"],
+  "route_prefixes": ["/api/v1/games"],
+  "architecture": "in-process",
+  "platform": {
+    "os": ["linux", "windows"],
+    "arch": ["x86_64", "aarch64"]
+  }
+}

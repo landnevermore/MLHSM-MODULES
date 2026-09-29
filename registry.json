@@ -1,0 +1,32 @@
+{
+  "schema_version": "mlhsm-registry/1",
+  "updated_at": "2026-09-29T00:00:00Z",
+  "modules": [
+    {
+      "id": "mlgsm",
+      "name": "MLGSM (MLGameServerManager)",
+      "description": "Container-basierte Game-Server: Eggs, Templates, Konsole, Dateien, Backups",
+      "author": "landnevermore",
+      "category": "gaming",
+      "version": "0.1.0",
+      "manifest": "modules/mlgsm/module.json",
+      "mlhsm": {
+        "min_version": "0.1.0",
+        "api": "mlhsm-module/1"
+      }
+    },
+    {
+      "id": "modelmesh",
+      "name": "ModelMesh",
+      "description": "Free-only AI routing across OpenRouter, Ollama, Groq and Google AI",
+      "author": "landnevermore",
+      "category": "ai",
+      "version": "0.1.0",
+      "manifest": "modules/modelmesh/module.json",
+      "mlhsm": {
+        "min_version": "0.1.0",
+        "api": "mlhsm-module/1"
+      }
+    }
+  ]
+}

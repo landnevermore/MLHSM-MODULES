@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/landnevermore/MLHSM-MODULES/main/schema/registry.schema.json",
+  "title": "MLHSM module registry",
+  "description": "The catalog at the repository root. Lists every module offered to MLHSM. The per-module manifest stays the source of truth for a single module; this file is the index a browser renders without fetching anything else.",
+  "type": "object",
+  "required": ["schema_version", "modules"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "description": "Version of THIS schema. A client that does not recognise this value must refuse the catalog rather than guess.",
+      "const": "mlhsm-registry/1"
+    },
+    "updated_at": {
+      "description": "RFC 3339 timestamp of the last catalog change. Informational only - clients decide freshness from the file itself, never from this field.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/moduleEntry" }
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+    },
+    "moduleEntry": {
+      "description": "Summary of one module. Deliberately flat and small.",
+      "type": "object",
+      "required": ["id", "name", "description", "author", "version", "manifest", "mlhsm"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable identifier, must equal the id in the module manifest. Lowercase, digits and dashes.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "author": {
+          "description": "Who publishes this module. A display value, never a trust anchor.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "category": {
+          "description": "Grouping for the browser. Free-form so a third-party module never needs a core change to add a category.",
+          "type": "string",
+          "maxLength": 50
+        },
+        "icon": {
+          "description": "Repository-relative path to the icon.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._/-]+\\.(png|svg|webp)$"
+        },
+        "version": { "$ref": "#/$defs/semver" },
+        "manifest": {
+          "description": "Repository-relative path to the module manifest.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._/-]+\\.json$"
+        },
+        "changelog": {
+          "description": "Repository-relative path to the module changelog.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._/-]+\\.(md|txt)$"
+        },
+        "release": {
+          "description": "Where the runnable artifact lives. Absent means metadata-only, not installable yet. MLHSM must not invent an artifact URL when this is missing.",
+          "type": "object",
+          "required": ["tag"],
+          "additionalProperties": false,
+          "properties": {
+            "tag": { "type": "string", "minLength": 1 },
+            "asset": { "type": "string", "minLength": 1 },
+            "url": {
+              "description": "Absolute https URL. A client must refuse anything else.",
+              "type": "string",
+              "pattern": "^https://"
+            },
+            "sha256": {
+              "description": "Lowercase hex digest of the asset. Required by CI once an asset is published.",
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "size": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "mlhsm": {
+          "description": "Host compatibility. An incompatible range hides the module in the browser instead of failing later at install time.",
+          "type": "object",
+          "required": ["min_version"],
+          "additionalProperties": false,
+          "properties": {
+            "min_version": { "$ref": "#/$defs/semver" },
+            "max_version": { "$ref": "#/$defs/semver" },
+            "api": {
+              "description": "Module API contract the module speaks.",
+              "type": "string",
+              "pattern": "^mlhsm-module/[0-9]+$"
+            }
+          }
+        }
+      }
+    }
+  }
+}
