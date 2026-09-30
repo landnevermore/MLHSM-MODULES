@@ -33,9 +33,9 @@ modules/<id>/
   module.json              the module's own manifest
   CHANGELOG.md             optional
 scripts/
-  validate_registry.py     the validator, usable locally (and by CI below)
+  validate_registry.py     the validator, usable locally and run by CI
 .github/workflows/
-  validate-registry.yml    written, but NOT yet pushed - see Status
+  validate-registry.yml    runs the validator on every relevant change
 ```
 
 ## Current modules
@@ -64,11 +64,14 @@ You do not need to touch the MLHSM core.
    ```bash
    python scripts/validate_registry.py
    ```
-5. **Open a pull request.** Once the workflow is active, CI runs the same
-   validator and fails on a schema violation, a duplicate id, a malformed
-   version, a missing required field, an unknown permission, a dependency that
-   does not exist, or a `route_prefixes` entry that claims a Core route. Until
-   then step 4 is the only gate — do not rely on CI catching it.
+5. **Open a pull request.** CI runs the same validator and fails on a schema
+   violation, a duplicate id, a malformed version, a missing required field, an
+   unknown permission, a dependency that does not exist, or a `route_prefixes`
+   entry that claims a Core route. It also fails if a referenced file is not in
+   the repository. Running it locally first still saves a round trip:
+   ```bash
+   python scripts/validate_registry.py
+   ```
 6. **Maintainer review**, then merge. The module appears in the MLHSM module
    browser on the next registry refresh.
 
@@ -131,7 +134,7 @@ Honest state of the pipeline, so nobody is surprised:
 | | |
 |---|---|
 | Catalog + manifests + schema | ✅ in this repository |
-| CI validation on pull requests | ⚠️ **workflow written, not yet active** — see below |
+| CI validation on pull requests | ✅ active — [run history](https://github.com/landnevermore/MLHSM-MODULES/actions/workflows/validate-registry.yml) |
 | MLHSM reads the catalog | ✅ in MLHSM |
 | Module browser in the UI | ✅ in MLHSM |
 | Caching with fallback when GitHub is down | ✅ in MLHSM |
@@ -143,24 +146,18 @@ compiled into the MLHSM binary today; this registry describes them, installs
 nothing, and runs nothing. Do not read a green CI badge as "this module is
 installable".
 
-### About the missing CI
+### The workflow was late, and that is on the record
 
-`.github/workflows/validate-registry.yml` is written and runs the same validator
-as `scripts/validate_registry.py`, but it is **not pushed**: the local `gh`
-token lacks the `workflow` scope, and the workflow was not committed rather
-than committed and silently failing. Until it is pushed:
+`.github/workflows/validate-registry.yml` sat unpushed for weeks because the
+local `gh` token lacked the `workflow` scope. While it was missing, this
+README said **⚠️ not active** rather than showing a green CI badge that did not
+exist — an audit of the schema passing is worth nothing if the audit itself was
+not running. The workflow is active now (`2572079`, first green run
+`36749519838`).
 
-```sh
-gh auth refresh -h github.com -s workflow
-git add .github/workflows/validate-registry.yml
-git commit -m "ci: registry validation on pull requests"
-git push
-```
-
-So the table above says ⚠️ and not ✅, and the pull-request instructions in this
-README currently do not happen automatically. **Validate locally before
-pushing:**
-
-```sh
-python scripts/validate_registry.py
-```
+It triggers on any change to `registry.json`, `modules/`, `schema/`, `scripts/`
+or the workflow itself, plus pushes to `main`, plus manual `workflow_dispatch`.
+Beyond what the validator checks on its own it also verifies that every path
+referenced in `registry.json` exists on disk — a `manifest` pointing at a file
+that was never committed is the most common way to break this repository, and
+the validator cannot catch it because it trusts the entry it was given.
