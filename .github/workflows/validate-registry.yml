@@ -1,0 +1,68 @@
+name: validate-registry
+
+# Runs on every pull request that touches the registry, and on push to main.
+# An invalid module must fail here, before a maintainer ever reviews it - the
+# review is for judgement, this is for mechanical correctness.
+on:
+  pull_request:
+    paths:
+      - "registry.json"
+      - "modules/**"
+      - "schema/**"
+      - "scripts/**"
+      - ".github/workflows/validate-registry.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate registry and manifests
+        run: python scripts/validate_registry.py
+
+      - name: Schemas are valid JSON
+        run: |
+          for f in registry.json schema/*.json modules/*/module.json; do
+            echo "  checking $f"
+            python -c "import json,sys; json.load(open('$f'))" || exit 1
+          done
+
+      - name: Registry paths exist
+        run: |
+          python - <<'PY'
+          import json, sys
+          from pathlib import Path
+          reg = json.load(open("registry.json", encoding="utf-8"))
+          missing = []
+          for m in reg["modules"]:
+              for key in ("manifest", "changelog", "icon"):
+                  p = m.get(key)
+                  if p and not Path(p).is_file():
+                      missing.append(f"{m['id']}: {key} -> {p}")
+          if missing:
+              print("referenced files do not exist:")
+              for x in missing:
+                  print("  " + x)
+              sys.exit(1)
+          print("all referenced paths exist")
+          PY
+
+      - name: Report module count
+        run: |
+          python - <<'PY'
+          import json
+          reg = json.load(open("registry.json", encoding="utf-8"))
+          ids = [m["id"] for m in reg["modules"]]
+          print(f"::notice title=Modules::" + f"{len(ids)} module(s): {', '.join(ids)}")
+          PY
