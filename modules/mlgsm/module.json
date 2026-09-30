@@ -5,6 +5,7 @@
   "author": "landnevermore",
   "version": "0.1.0",
   "category": "gaming",
+  "origin": "internal",
   "mlhsm": {
     "min_version": "0.1.0",
     "api": "mlhsm-module/1"

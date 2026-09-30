@@ -23,6 +23,48 @@
     },
     "category": { "type": "string", "maxLength": 50 },
 
+    "origin": {
+      "description": "Whether the module runs inside the MLHSM process or as a supervised child process. Absent means internal, which is what every manifest written before external modules existed means.",
+      "type": "string",
+      "enum": ["internal", "external"],
+      "default": "internal"
+    },
+    "entry": {
+      "description": "How to launch an external module. Meaningless unless origin is external. A registry manifest is untrusted metadata: declaring a command grants nothing - the operator has to install the module locally, and the command is resolved as a bare file name inside the module's own runtime directory.",
+      "type": "object",
+      "required": ["command"],
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "description": "Bare executable file name. No path separators, no drive letter, no traversal - the same rule the Rust ModuleEntry::validate applies, so a manifest the registry accepts is a manifest the host can start.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 }
+        },
+        "protocol": {
+          "description": "Closed on purpose: an unknown protocol must fail rather than fall through to a default that would be silently wrong.",
+          "type": "string",
+          "enum": ["http"],
+          "default": "http"
+        },
+        "health_path": {
+          "type": "string",
+          "pattern": "^/[A-Za-z0-9._/-]*$",
+          "default": "/health"
+        },
+        "prefer_arg_port": {
+          "description": "Pass the assigned port as an argument instead of MLHSM_MODULE_PORT. The environment variable is the default because it cannot collide with the module's own argument parsing.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+
     "mlhsm": {
       "type": "object",
       "required": ["min_version"],

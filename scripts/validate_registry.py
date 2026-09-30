@@ -52,6 +52,12 @@ PERMISSIONS = {
     "system",
 }
 
+# Closed vocabularies, kept in step with hsm-core/src/origin.rs. A value outside
+# these is a typo or an attempt to invent a capability, and both should fail CI
+# rather than reach the host.
+ORIGINS = {"internal", "external"}
+PROTOCOLS = {"http"}
+
 # Routes the host owns, copied from `core_routes()` in
 # hsm-core/src/module.rs. A module claiming one of these is rejected - the
 # same rule the host enforces at registration time. Keep the two in sync.
@@ -187,6 +193,80 @@ def check_manifest(path: Path, entry_id: str) -> None:
         digest = art.get("sha256")
         if digest and not SHA256.match(digest):
             err(f"{where}.artifact.sha256: must be 64 lowercase hex chars")
+
+    check_entry(data, where)
+
+
+def check_entry(data: dict, where: str) -> None:
+    """Validate `origin` and `entry` against the same rules the host applies.
+
+    The schema constrains the shape; this re-checks the parts a regex cannot
+    decide on its own. A manifest that passes CI has to be a manifest the Rust
+    side can start, and the Rust side is stricter than a JSON-Schema pattern:
+    `ModuleEntry::validate` rejects any command containing a separator or a
+    drive colon outright. Accepting something here that the host then refuses
+    would be a module that looks installable and is not.
+    """
+    origin = data.get("origin", "internal")
+    if origin not in ORIGINS:
+        err(f"{where}.origin: must be one of {', '.join(sorted(ORIGINS))}, got {origin!r}")
+
+    entry = data.get("entry")
+    if origin != "external":
+        if entry is not None:
+            err(
+                f"{where}.entry: present but origin is {origin!r}. An entry only "
+                f"means something for an external module."
+            )
+        return
+
+    if not isinstance(entry, dict):
+        err(f"{where}.entry: required for an external module")
+        return
+
+    command = entry.get("command", "")
+    if not isinstance(command, str) or not command.strip():
+        err(f"{where}.entry.command: required for an external module")
+    else:
+        # Mirrors ModuleEntry::validate in hsm-core/src/origin.rs.
+        if command in (".", ".."):
+            err(f"{where}.entry.command: must name a file, got {command!r}")
+        if "/" in command or "\\" in command:
+            err(
+                f"{where}.entry.command: must be a bare file name with no path "
+                f"separator, got {command!r}"
+            )
+        if ":" in command:
+            err(
+                f"{where}.entry.command: must not contain a drive or stream "
+                f"prefix, got {command!r}"
+            )
+
+    protocol = entry.get("protocol", "http")
+    if protocol not in PROTOCOLS:
+        err(
+            f"{where}.entry.protocol: unknown protocol {protocol!r} "
+            f"(known: {', '.join(sorted(PROTOCOLS))})"
+        )
+
+    health = entry.get("health_path", "/health")
+    if not isinstance(health, str) or not health.startswith("/"):
+        err(f"{where}.entry.health_path: must be an absolute path, got {health!r}")
+
+    for arg in entry.get("args", []):
+        if not isinstance(arg, str):
+            err(f"{where}.entry.args: entries must be strings, got {arg!r}")
+        elif "\0" in arg:
+            err(f"{where}.entry.args: must not contain NUL")
+
+    # An external module that is only ever served on loopback still needs a
+    # route_prefix, otherwise it would run and be unreachable - and a module
+    # with no prefix is indistinguishable from one that is broken.
+    if not data.get("route_prefixes"):
+        err(
+            f"{where}: an external module needs at least one route_prefix, "
+            f"otherwise the proxy has nothing to match"
+        )
 
 
 def main() -> int:
