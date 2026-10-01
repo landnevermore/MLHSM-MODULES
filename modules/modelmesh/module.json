@@ -6,6 +6,7 @@
   "version": "0.1.0",
   "category": "ai",
   "origin": "internal",
+  "display_name": "ModelMesh",
   "mlhsm": {
     "min_version": "0.1.0",
     "api": "mlhsm-module/1"

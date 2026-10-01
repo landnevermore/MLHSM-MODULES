@@ -6,6 +6,7 @@
   "version": "0.1.0",
   "category": "gaming",
   "origin": "internal",
+  "display_name": "Game-Server",
   "mlhsm": {
     "min_version": "0.1.0",
     "api": "mlhsm-module/1"

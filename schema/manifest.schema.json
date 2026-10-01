@@ -14,6 +14,12 @@
       "maxLength": 64
     },
     "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "display_name": {
+      "description": "How this installation wants the module called in the dashboard. Absent means the module's own `name` is shown. Presentation only: it must not name a route, grant a permission, or be required for the module to work.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
     "description": { "type": "string", "minLength": 1, "maxLength": 500 },
     "author": { "type": "string", "minLength": 1, "maxLength": 100 },
     "version": { "$ref": "#/$defs/semver" },

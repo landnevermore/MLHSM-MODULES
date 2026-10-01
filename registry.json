@@ -5,6 +5,7 @@
     {
       "id": "mlgsm",
       "name": "MLGSM (MLGameServerManager)",
+      "display_name": "Game-Server",
       "description": "Container-basierte Game-Server: Eggs, Templates, Konsole, Dateien, Backups",
       "author": "landnevermore",
       "category": "gaming",
@@ -18,6 +19,7 @@
     {
       "id": "modelmesh",
       "name": "ModelMesh",
+      "display_name": "ModelMesh",
       "description": "Free-only AI routing across OpenRouter, Ollama, Groq and Google AI",
       "author": "landnevermore",
       "category": "ai",

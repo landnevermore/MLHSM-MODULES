@@ -41,6 +41,12 @@
           "maxLength": 64
         },
         "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+      "display_name": {
+        "description": "How this installation wants the module called in the dashboard. Absent means the module's own `name` is shown. Presentation only, never a route or a permission.",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 60
+      },
         "description": { "type": "string", "minLength": 1, "maxLength": 500 },
         "author": {
           "description": "Who publishes this module. A display value, never a trust anchor.",
