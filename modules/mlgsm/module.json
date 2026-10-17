@@ -5,8 +5,16 @@
   "author": "landnevermore",
   "version": "0.1.0",
   "category": "gaming",
-  "origin": "internal",
+  "origin": "external",
   "display_name": "Game-Server",
+  "architecture": "out-of-process",
+  "entry": {
+    "command": "mlgsm.exe",
+    "args": [],
+    "protocol": "http",
+    "health_path": "/health",
+    "prefer_arg_port": true
+  },
   "mlhsm": {
     "min_version": "0.1.0",
     "api": "mlhsm-module/1"
@@ -23,6 +31,11 @@
       "id": "filesystem",
       "description": "Liest und schreibt Eggs, Install-Fortschritt und Serverkonfiguration unter data/modules/mlgsm/.",
       "required": true
+    },
+    {
+      "id": "network",
+      "description": "Netzwerkzugriff fuer Game-Server-Kommunikation auf loopback.",
+      "required": true
     }
   ],
   "provides": [
@@ -37,9 +50,11 @@
   "owned_paths": ["eggs", "installs", "servers.json"],
   "database_tables": ["game_servers"],
   "route_prefixes": ["/api/v1/games"],
-  "architecture": "in-process",
   "platform": {
     "os": ["linux", "windows"],
     "arch": ["x86_64", "aarch64"]
-  }
+  },
+  "canvas_regions": [
+    { "name": "mlgsm_stats", "title": "MLGSM", "slot": "main", "order": 0 }
+  ]
 }

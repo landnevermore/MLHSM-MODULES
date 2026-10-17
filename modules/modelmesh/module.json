@@ -5,8 +5,16 @@
   "author": "landnevermore",
   "version": "0.1.0",
   "category": "ai",
-  "origin": "internal",
+  "origin": "external",
   "display_name": "ModelMesh",
+  "architecture": "out-of-process",
+  "entry": {
+    "command": "modelmesh.exe",
+    "args": [],
+    "protocol": "http",
+    "health_path": "/health",
+    "prefer_arg_port": true
+  },
   "mlhsm": {
     "min_version": "0.1.0",
     "api": "mlhsm-module/1"
@@ -23,6 +31,11 @@
       "id": "credentials",
       "description": "Liest Provider-Keys aus dem OS-Credential-Store. Schreibt sie nie in die Datenbank oder in Logs.",
       "required": true
+    },
+    {
+      "id": "filesystem",
+      "description": "Schreibt Model-Cache und Routing-Entscheidungen unter data/modules/modelmesh/.",
+      "required": false
     }
   ],
   "provides": [
@@ -39,9 +52,16 @@
     "mm_usage"
   ],
   "route_prefixes": ["/api/v1/modelmesh"],
-  "architecture": "in-process",
   "platform": {
     "os": ["linux", "windows"],
     "arch": ["x86_64", "aarch64"]
-  }
+  },
+  "canvas_regions": [
+    {
+      "name": "modelmesh_status",
+      "title": "ModelMesh",
+      "slot": "main",
+      "order": 1
+    }
+  ]
 }
