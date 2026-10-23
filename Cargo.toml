@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = ["shared/hsm-model", "modules/mlgsm", "modules/modelmesh"]
+
+[profile.release]
+opt-level = 2
+lto = "thin"
+codegen-units = 4
+panic = "abort"
+strip = true

@@ -8,53 +8,19 @@
   "origin": "external",
   "display_name": "Game-Server",
   "architecture": "out-of-process",
-  "entry": {
-    "command": "mlgsm.exe",
-    "args": [],
-    "protocol": "http",
-    "health_path": "/health",
-    "prefer_arg_port": true
-  },
-  "mlhsm": {
-    "min_version": "0.1.0",
-    "api": "mlhsm-module/1"
-  },
+  "entry": { "command": "mlgsm", "args": [], "protocol": "http", "health_path": "/health", "prefer_arg_port": true },
+  "mlhsm": { "min_version": "0.1.0", "api": "mlhsm-module/1" },
   "dependencies": [],
   "optional_dependencies": [],
   "permissions": [
-    {
-      "id": "docker",
-      "description": "Legt Container an, startet und stoppt Game-Server, verwaltet Engine-Volumes fuer die Spieldaten.",
-      "required": true
-    },
-    {
-      "id": "filesystem",
-      "description": "Liest und schreibt Eggs, Install-Fortschritt und Serverkonfiguration unter data/modules/mlgsm/.",
-      "required": true
-    },
-    {
-      "id": "network",
-      "description": "Netzwerkzugriff fuer Game-Server-Kommunikation auf loopback.",
-      "required": true
-    }
+    { "id": "docker", "description": "Legt Container an, startet und stoppt Game-Server und verwaltet Engine-Volumes.", "required": true },
+    { "id": "filesystem", "description": "Liest und schreibt Eggs, Install-Fortschritt und Serverkonfiguration unter data/modules/mlgsm/.", "required": true },
+    { "id": "network", "description": "Netzwerkzugriff fuer Game-Server-Kommunikation.", "required": true }
   ],
-  "provides": [
-    "server-lifecycle",
-    "eggs",
-    "templates",
-    "console",
-    "file-manager",
-    "port-management",
-    "backups"
-  ],
+  "provides": ["server-lifecycle", "eggs", "templates", "console", "file-manager", "port-management", "backups"],
   "owned_paths": ["eggs", "installs", "servers.json"],
   "database_tables": ["game_servers"],
   "route_prefixes": ["/api/v1/games"],
-  "platform": {
-    "os": ["linux", "windows"],
-    "arch": ["x86_64", "aarch64"]
-  },
-  "canvas_regions": [
-    { "name": "mlgsm_stats", "title": "MLGSM", "slot": "main", "order": 0 }
-  ]
+  "platform": { "os": ["linux", "windows"], "arch": ["x86_64", "aarch64"] },
+  "canvas_regions": [{ "name": "mlgsm_stats", "title": "MLGSM", "slot": "main", "order": 0 }]
 }

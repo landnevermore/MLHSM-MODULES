@@ -1,0 +1,18 @@
+name: Build standalone modules
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  cargo-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Check workspace
+        run: cargo check --workspace --all-targets
+      - name: Validate module registry
+        run: python3 scripts/validate_registry.py
