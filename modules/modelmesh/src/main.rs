@@ -50,7 +50,7 @@ async fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(18_766);
 
-    let data_dir: PathBuf = std::env::var("MODELMECH_DATA_DIR")
+    let data_dir: PathBuf = std::env::var("MODEL_MESH_DATA_DIR")
         .ok()
         .map(PathBuf::from)
         .unwrap_or_else(|| std::env::current_dir().unwrap().join("data").join("modelmesh"));
@@ -60,27 +60,27 @@ async fn main() {
     let db = ModelMeshDb::open(&db_path).expect("Failed to open database");
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    println!("MODELMECH_PORT={port}");
+    println!("MODEL_MESH_PORT={port}");
     std::io::Write::flush(&mut std::io::stdout()).ok();
     eprintln!("modelmesh on http://127.0.0.1:{port}/ (PID={})", std::process::id());
 
     let app = Router::new()
         .route("/health", get(health))
-        .route("/api/v1/providers", get(list_providers).post(create_provider))
-        .route("/api/v1/providers/{id}", put(update_provider).delete(delete_provider))
-        .route("/api/v1/providers/{id}/test", post(test_provider))
-        .route("/api/v1/models", get(list_models).post(create_model))
-        .route("/api/v1/models/{id}", put(update_model).delete(delete_model))
-        .route("/api/v1/routing/decisions", get(list_decisions))
-        .route("/api/v1/routing/test", post(test_routing))
-        .route("/api/v1/route", post(route_request))
-        .route("/api/v1/usage", get(list_usage))
-        .route("/api/v1/usage/stats", get(get_usage_stats))
-        .route("/api/v1/chat", post(chat_completion))
-        .route("/api/v1/discovery", get(discovery_status))
-        .route("/api/v1/sync", post(sync_models))
-        .route("/api/v1/jev/config", get(get_jev_config).put(set_jev_config))
-        .route("/api/v1/jev/test", post(test_jev))
+        .route("/providers", get(list_providers).post(create_provider))
+        .route("/providers/{id}", put(update_provider).delete(delete_provider))
+        .route("/providers/{id}/test", post(test_provider))
+        .route("/models", get(list_models).post(create_model))
+        .route("/models/{id}", put(update_model).delete(delete_model))
+        .route("/routing/decisions", get(list_decisions))
+        .route("/routing/test", post(test_routing))
+        .route("/route", post(route_request))
+        .route("/usage", get(list_usage))
+        .route("/usage/stats", get(get_usage_stats))
+        .route("/chat", post(chat_completion))
+        .route("/discovery", get(discovery_status))
+        .route("/sync", post(sync_models))
+        .route("/jev/config", get(get_jev_config).put(set_jev_config))
+        .route("/jev/test", post(test_jev))
         .with_state(db);
 
     let listener = tokio::net::TcpListener::bind(addr).await.expect("Failed to bind");
@@ -126,7 +126,7 @@ async fn delete_provider(State(db): State<ModelMeshDb>, Path(id): Path<String>) 
 async fn test_provider(State(db): State<ModelMeshDb>, Path(id): Path<String>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let provider = db.get_provider(&id).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?
         .ok_or_else(|| (StatusCode::NOT_FOUND, "Provider nicht gefunden".into()))?;
-    let key = std::env::var("MODELMECH_API_KEY").ok().unwrap_or_default();
+    let key = std::env::var("MODEL_MESH_API_KEY").ok().unwrap_or_default();
     match provider::test_provider(&provider.base_url, &key).await {
         Ok(models) => Ok(Json(serde_json::json!({ "ok": true, "models": models }))),
         Err(e) => Ok(Json(serde_json::json!({ "ok": false, "error": e }))),
@@ -177,7 +177,7 @@ async fn test_routing(State(db): State<ModelMeshDb>, Json(req): Json<TestRouting
     let mut routable: Vec<routing::RoutableModel> = Vec::new();
     for model in &models {
         if let Some(provider) = providers.iter().find(|p| p.id == model.provider_id) {
-            let api_key = std::env::var(format!("MODELMECH_API_KEY_{}", model.provider_id)).unwrap_or_default();
+            let api_key = std::env::var(format!("MODEL_MESH_API_KEY_{}", model.provider_id)).unwrap_or_default();
             if !model.enabled || provider.base_url.is_empty() { continue; }
             routable.push(routing::RoutableModel { model: model.clone(), provider_id: provider.id.clone(), provider_name: provider.name.clone(), base_url: provider.base_url.clone(), api_key });
         }
@@ -200,7 +200,7 @@ async fn route_request(State(db): State<ModelMeshDb>, Json(req): Json<ChatComple
     let mut routable: Vec<routing::RoutableModel> = Vec::new();
     for model in &models {
         if let Some(provider) = providers.iter().find(|p| p.id == model.provider_id) {
-            let api_key = std::env::var(format!("MODELMECH_API_KEY_{}", model.provider_id)).unwrap_or_default();
+            let api_key = std::env::var(format!("MODEL_MESH_API_KEY_{}", model.provider_id)).unwrap_or_default();
             if !model.enabled || provider.base_url.is_empty() { continue; }
             routable.push(routing::RoutableModel { model: model.clone(), provider_id: provider.id.clone(), provider_name: provider.name.clone(), base_url: provider.base_url.clone(), api_key });
         }
@@ -235,7 +235,7 @@ async fn chat_completion(State(db): State<ModelMeshDb>, Json(req): Json<ChatComp
     let mut routable: Vec<routing::RoutableModel> = Vec::new();
     for model in &models {
         if let Some(provider) = providers.iter().find(|p| p.id == model.provider_id) {
-            let api_key = std::env::var(format!("MODELMECH_API_KEY_{}", model.provider_id)).unwrap_or_default();
+            let api_key = std::env::var(format!("MODEL_MESH_API_KEY_{}", model.provider_id)).unwrap_or_default();
             if !model.enabled || provider.base_url.is_empty() { continue; }
             routable.push(routing::RoutableModel { model: model.clone(), provider_id: provider.id.clone(), provider_name: provider.name.clone(), base_url: provider.base_url.clone(), api_key });
         }
