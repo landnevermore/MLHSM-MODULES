@@ -129,10 +129,14 @@ jobs:
           MODULE_ID: ${{ steps.meta.outputs.id }}
           MODULE_VERSION: ${{ steps.meta.outputs.version }}
           TAG: ${{ steps.meta.outputs.tag }}
-          ASSET: ${{ env.ASSET }}
         run: |
           set -euo pipefail
-          ASSET="${ASSET}"
+          if [ "$MODULE_ID" = "social-uploader" ]; then
+            ASSET="$MODULE_ID-windows-x86_64.zip"
+          else
+            ASSET="$MODULE_ID-linux-x86_64.tar.gz"
+          fi
+          export ASSET
           URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ASSET"
           SHA="$(cut -d ' ' -f 1 "$ASSET.sha256")"
           SIZE="$(cat "$ASSET.size")"
