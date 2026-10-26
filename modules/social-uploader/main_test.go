@@ -44,7 +44,7 @@ func TestCreateJobIsIdempotentAndProjectScoped(t *testing.T) {
 func TestProjectTokenCannotReadAnotherProject(t *testing.T) {
 	api := testAPI(t)
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/social-uploader/projects/lyricamundo/jobs", nil)
-	r.Header.Set("Authorization", "Bearer rapitup-test-token-0123456789012345")
+	r.Header.Set("X-Social-Uploader-Project-Token", "rapitup-test-token-0123456789012345")
 	w := httptest.NewRecorder(); api.ServeHTTP(w,r)
 	if w.Code != http.StatusForbidden { t.Fatalf("status = %d, want 403", w.Code) }
 }
@@ -52,7 +52,7 @@ func TestProjectTokenCannotReadAnotherProject(t *testing.T) {
 func TestPublishingFailsClosedWithoutAdapter(t *testing.T) {
 	api := testAPI(t)
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/social-uploader/projects/rapitup/jobs/suj_123:publish", nil)
-	r.Header.Set("Authorization", "Bearer rapitup-test-token-0123456789012345")
+	r.Header.Set("X-Social-Uploader-Project-Token", "rapitup-test-token-0123456789012345")
 	w := httptest.NewRecorder(); api.ServeHTTP(w,r)
 	if w.Code != http.StatusNotImplemented { t.Fatalf("status = %d, want 501", w.Code) }
 }
