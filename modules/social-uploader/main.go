@@ -64,6 +64,7 @@ type Store struct {
 var (
 	idPattern       = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$`)
 	projectTokens   map[string]string
+	projectAccounts map[string]map[string]bool
 	supportedTarget = map[string]bool{"tiktok": true, "instagram": true, "youtube": true, "facebook": true, "x": true, "linkedin": true}
 )
 
@@ -190,10 +191,8 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) authorize(w http.ResponseWriter, r *http.Request, project string) bool {
-	const prefix = "Bearer "
-	header := r.Header.Get("Authorization")
-	if !strings.HasPrefix(header, prefix) { writeError(w, http.StatusUnauthorized, "unauthorized", "project bearer token required"); return false }
-	provided := strings.TrimPrefix(header, prefix)
+	provided := r.Header.Get("X-Social-Uploader-Project-Token")
+	if provided == "" { writeError(w, http.StatusUnauthorized, "unauthorized", "project token required"); return false }
 	expected, ok := projectTokens[project]
 	if !ok || subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) != 1 {
 		writeError(w, http.StatusForbidden, "project_access_denied", "token is not authorized for this project"); return false
@@ -214,6 +213,7 @@ func (a *API) createJob(w http.ResponseWriter, r *http.Request, project string) 
 	req.MediaRef = strings.TrimSpace(req.MediaRef)
 	req.IdempotencyKey = strings.TrimSpace(req.IdempotencyKey)
 	if !supportedTarget[req.Platform] { writeError(w, http.StatusBadRequest, "unsupported_platform", "unsupported platform"); return }
+	if !projectAccounts[project][req.AccountID] { writeError(w, http.StatusForbidden, "account_not_assigned", "target account is not assigned to this project"); return }
 	if !idPattern.MatchString(req.AccountID) || !idPattern.MatchString(req.MediaRef) || !idPattern.MatchString(req.IdempotencyKey) {
 		writeError(w, http.StatusBadRequest, "invalid_fields", "account_id, media_ref and idempotency_key must be valid identifiers"); return
 	}
@@ -242,10 +242,28 @@ func loadProjectTokens() (map[string]string, error) {
 	return tokens, nil
 }
 
+func loadProjectAccounts() (map[string]map[string]bool, error) {
+	raw := os.Getenv("SOCIAL_UPLOADER_PROJECT_ACCOUNTS")
+	if raw == "" { return nil, errors.New("SOCIAL_UPLOADER_PROJECT_ACCOUNTS must map each project ID to its allowed account IDs") }
+	var source map[string][]string
+	if err := json.Unmarshal([]byte(raw), &source); err != nil { return nil, fmt.Errorf("parse SOCIAL_UPLOADER_PROJECT_ACCOUNTS: %w", err) }
+	accounts := make(map[string]map[string]bool, len(source))
+	for project, ids := range source {
+		if !idPattern.MatchString(project) || len(ids) == 0 { return nil, fmt.Errorf("project %q must have a valid id and at least one account", project) }
+		accounts[project] = make(map[string]bool, len(ids))
+		for _, id := range ids { if !idPattern.MatchString(id) { return nil, fmt.Errorf("project %q has invalid account id %q", project, id) }; accounts[project][id] = true }
+	}
+	return accounts, nil
+}
+
 func main() {
 	var err error
 	projectTokens, err = loadProjectTokens()
 	if err != nil { log.Fatal(err) }
+	projectAccounts, err = loadProjectAccounts()
+	if err != nil { log.Fatal(err) }
+	for project := range projectTokens { if _, ok := projectAccounts[project]; !ok { log.Fatalf("project %q has a token but no account allowlist", project) } }
+	for project := range projectAccounts { if _, ok := projectTokens[project]; !ok { log.Fatalf("project %q has an account allowlist but no token", project) } }
 	path := os.Getenv("SOCIAL_UPLOADER_DATA_FILE")
 	if path == "" { path = "data/modules/social-uploader/jobs.json" }
 	store, err := openStore(path)
