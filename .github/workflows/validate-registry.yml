@@ -48,6 +48,15 @@ jobs:
         run: |
           go test ./...
           go vet ./...
+      - name: Validate Go module sources
+        run: |
+          set -euo pipefail
+          for dir in modules/*; do
+            if [ -f "$dir/go.mod" ]; then
+              echo "Testing $dir"
+              (cd "$dir" && go test ./... && go vet ./...)
+            fi
+          done
       - name: Registry paths exist
         run: |
           python - <<'PY'
