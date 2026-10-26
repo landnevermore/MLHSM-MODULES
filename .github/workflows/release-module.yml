@@ -81,7 +81,7 @@ jobs:
           go test ./...
           go vet ./...
 
-      - name: Build and package Linux x86_64
+      - name: Build and package target platform
         env:
           MODULE_ID: ${{ steps.meta.outputs.id }}
         run: |
@@ -91,13 +91,22 @@ jobs:
           mkdir -p "$WORK/runtime"
           cd "$ROOT"
           BIN="$(python3 -c 'import json; print(json.load(open("module.json"))["entry"]["command"])')"
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$WORK/runtime/$BIN" .
-          cp module.json "$WORK/module.json"
-          cd "$WORK"
-          tar -czf "$GITHUB_WORKSPACE/$MODULE_ID-linux-x86_64.tar.gz" module.json runtime
+          if [ "$MODULE_ID" = "social-uploader" ]; then
+            ASSET="$MODULE_ID-windows-x86_64.zip"
+            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$WORK/runtime/$BIN.exe" .
+            cp tiktok_worker.py requirements.txt "$WORK/runtime/"
+            cp module.json "$WORK/module.json"
+            (cd "$WORK" && zip -qr "$GITHUB_WORKSPACE/$ASSET" module.json runtime)
+          else
+            ASSET="$MODULE_ID-linux-x86_64.tar.gz"
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$WORK/runtime/$BIN" .
+            cp module.json "$WORK/module.json"
+            (cd "$WORK" && tar -czf "$GITHUB_WORKSPACE/$ASSET" module.json runtime)
+          fi
           cd "$GITHUB_WORKSPACE"
-          sha256sum "$MODULE_ID-linux-x86_64.tar.gz" > "$MODULE_ID-linux-x86_64.tar.gz.sha256"
-          stat -c '%s' "$MODULE_ID-linux-x86_64.tar.gz" > "$MODULE_ID-linux-x86_64.tar.gz.size"
+          sha256sum "$ASSET" > "$ASSET.sha256"
+          stat -c '%s' "$ASSET" > "$ASSET.size"
+          echo "ASSET=$ASSET" >> "$GITHUB_ENV"
 
       - name: Publish GitHub release
         env:
@@ -106,11 +115,13 @@ jobs:
           MODULE_ID: ${{ steps.meta.outputs.id }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" \
-            "$MODULE_ID-linux-x86_64.tar.gz" \
-            "$MODULE_ID-linux-x86_64.tar.gz.sha256" \
-            --title "$MODULE_ID $TAG" \
-            --notes "Automated MLHSM external module release. Linux x86_64."
+          NOTES="Automated MLHSM external module release."
+          if [ "$MODULE_ID" = "social-uploader" ]; then
+            NOTES="$NOTES Windows x86_64; includes the Python Playwright worker."
+          else
+            NOTES="$NOTES Linux x86_64."
+          fi
+          gh release create "$TAG" "$ASSET" "$ASSET.sha256" --title "$MODULE_ID $TAG" --notes "$NOTES"
 
       - name: Publish artifact metadata to the central registry
         env:
@@ -118,9 +129,10 @@ jobs:
           MODULE_ID: ${{ steps.meta.outputs.id }}
           MODULE_VERSION: ${{ steps.meta.outputs.version }}
           TAG: ${{ steps.meta.outputs.tag }}
+          ASSET: ${{ env.ASSET }}
         run: |
           set -euo pipefail
-          ASSET="$MODULE_ID-linux-x86_64.tar.gz"
+          ASSET="${ASSET}"
           URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ASSET"
           SHA="$(cut -d ' ' -f 1 "$ASSET.sha256")"
           SIZE="$(cat "$ASSET.size")"
@@ -132,7 +144,7 @@ jobs:
           module_id = os.environ["MODULE_ID"]
           version = os.environ["MODULE_VERSION"]
           tag = os.environ["TAG"]
-          asset = f"{module_id}-linux-x86_64.tar.gz"
+          asset = os.environ["ASSET"]
           url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{tag}/{asset}"
           sha = Path(f"{asset}.sha256").read_text().split()[0]
           size = int(Path(f"{asset}.size").read_text().strip())
