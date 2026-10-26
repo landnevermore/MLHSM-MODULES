@@ -14,6 +14,7 @@ func testAPI(t *testing.T) *API {
 	store, err := openStore(filepath.Join(t.TempDir(), "jobs.json"))
 	if err != nil { t.Fatal(err) }
 	projectTokens = map[string]string{"rapitup":"rapitup-test-token-0123456789012345", "lyricamundo":"lyricamundo-test-token-012345678901"}
+	projectAccounts = map[string]map[string]bool{"rapitup":{"account-1":true}, "lyricamundo":{"account-2":true}}
 	return &API{store:store}
 }
 
@@ -23,7 +24,7 @@ func TestCreateJobIsIdempotentAndProjectScoped(t *testing.T) {
 	raw, _ := json.Marshal(body)
 	call := func() *httptest.ResponseRecorder {
 		r := httptest.NewRequest(http.MethodPost, "/api/v1/social-uploader/projects/rapitup/jobs", bytes.NewReader(raw))
-		r.Header.Set("Authorization", "Bearer rapitup-test-token-0123456789012345")
+		r.Header.Set("X-Social-Uploader-Project-Token", "rapitup-test-token-0123456789012345")
 		w := httptest.NewRecorder(); api.ServeHTTP(w,r); return w
 	}
 	first := call()
@@ -35,6 +36,9 @@ func TestCreateJobIsIdempotentAndProjectScoped(t *testing.T) {
 	if err := json.Unmarshal(second.Body.Bytes(), &b); err != nil { t.Fatal(err) }
 	if a.ID != b.ID { t.Fatalf("idempotency mismatch: %s != %s", a.ID,b.ID) }
 	if len(api.store.list("lyricamundo")) != 0 { t.Fatal("job leaked across projects") }
+	wrongAccount := body; wrongAccount.AccountID = "account-2"; wrongRaw, _ := json.Marshal(wrongAccount)
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/social-uploader/projects/rapitup/jobs", bytes.NewReader(wrongRaw)); r.Header.Set("X-Social-Uploader-Project-Token", "rapitup-test-token-0123456789012345")
+	w := httptest.NewRecorder(); api.ServeHTTP(w,r); if w.Code != http.StatusForbidden { t.Fatalf("cross-project account status = %d", w.Code) }
 }
 
 func TestProjectTokenCannotReadAnotherProject(t *testing.T) {
