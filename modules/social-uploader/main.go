@@ -37,25 +37,25 @@ const (
 )
 
 type Job struct {
-	ID             string         \`json:"id"\`
-	ProjectID      string         \`json:"project_id"\`
-	Platform       string         \`json:"platform"\`
-	AccountID      string         \`json:"account_id"\`
-	MediaRef       string         \`json:"media_ref"\`
-	Payload        map[string]any \`json:"payload"\`
-	IdempotencyKey string         \`json:"idempotency_key"\`
-	Status         JobStatus      \`json:"status"\`
-	ErrorCode      string         \`json:"error_code,omitempty"\`
-	CreatedAt      time.Time      \`json:"created_at"\`
-	UpdatedAt      time.Time      \`json:"updated_at"\`
+	ID             string         `json:"id"`
+	ProjectID      string         `json:"project_id"`
+	Platform       string         `json:"platform"`
+	AccountID      string         `json:"account_id"`
+	MediaRef       string         `json:"media_ref"`
+	Payload        map[string]any `json:"payload"`
+	IdempotencyKey string         `json:"idempotency_key"`
+	Status         JobStatus      `json:"status"`
+	ErrorCode      string         `json:"error_code,omitempty"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 type CreateJobRequest struct {
-	Platform       string         \`json:"platform"\`
-	AccountID      string         \`json:"account_id"\`
-	MediaRef       string         \`json:"media_ref"\`
-	Payload        map[string]any \`json:"payload"\`
-	IdempotencyKey string         \`json:"idempotency_key"\`
+	Platform       string         `json:"platform"`
+	AccountID      string         `json:"account_id"`
+	MediaRef       string         `json:"media_ref"`
+	Payload        map[string]any `json:"payload"`
+	IdempotencyKey string         `json:"idempotency_key"`
 }
 
 type Store struct {
@@ -65,8 +65,8 @@ type Store struct {
 }
 
 var (
-	idPattern       = regexp.MustCompile(\`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$\`)
-	errorCodePattern = regexp.MustCompile(\`^[a-z0-9_]{1,80}$\`)
+	idPattern       = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$`)
+	errorCodePattern = regexp.MustCompile(`^[a-z0-9_]{1,80}$`)
 	projectTokens   map[string]string
 	projectAccounts map[string]map[string]bool
 	supportedTarget = map[string]bool{"tiktok": true, "instagram": true, "youtube": true, "facebook": true, "x": true, "linkedin": true}
@@ -359,8 +359,8 @@ func (a *API) publish(w http.ResponseWriter, project, id string) {
 }
 
 type workerResult struct {
-	Status    string \`json:"status"\`
-	ErrorCode string \`json:"error_code"\`
+	Status    string `json:"status"`
+	ErrorCode string `json:"error_code"`
 }
 
 func (a *API) runTikTok(job Job) {
