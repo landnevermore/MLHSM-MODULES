@@ -65,7 +65,142 @@ type Store struct {
 }
 
 var (
-	idPattern       = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$`)
+	idPattern       = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}package main
+
+import (
+	"context"
+	"crypto/subtle"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+)
+
+const (
+	moduleID = "social-uploader"
+	maxBody  = 1 << 20
+)
+
+type JobStatus string
+
+const (
+	StatusQueued     JobStatus = "queued"
+	StatusPublishing JobStatus = "publishing"
+	StatusSucceeded  JobStatus = "succeeded"
+	StatusFailed     JobStatus = "failed"
+	StatusUnknown    JobStatus = "unknown"
+)
+
+type Job struct {
+	ID             string         `json:"id"`
+	ProjectID      string         `json:"project_id"`
+	Platform       string         `json:"platform"`
+	AccountID      string         `json:"account_id"`
+	MediaRef       string         `json:"media_ref"`
+	Payload        map[string]any `json:"payload"`
+	IdempotencyKey string         `json:"idempotency_key"`
+	Status         JobStatus      `json:"status"`
+	ErrorCode      string         `json:"error_code,omitempty"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type CreateJobRequest struct {
+	Platform       string         `json:"platform"`
+	AccountID      string         `json:"account_id"`
+	MediaRef       string         `json:"media_ref"`
+	Payload        map[string]any `json:"payload"`
+	IdempotencyKey string         `json:"idempotency_key"`
+}
+
+type Store struct {
+	mu   sync.RWMutex
+	path string
+	jobs map[string]Job
+}
+
+var (
+	)
+	pathIDPattern   = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}package main
+
+import (
+	"context"
+	"crypto/subtle"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+)
+
+const (
+	moduleID = "social-uploader"
+	maxBody  = 1 << 20
+)
+
+type JobStatus string
+
+const (
+	StatusQueued     JobStatus = "queued"
+	StatusPublishing JobStatus = "publishing"
+	StatusSucceeded  JobStatus = "succeeded"
+	StatusFailed     JobStatus = "failed"
+	StatusUnknown    JobStatus = "unknown"
+)
+
+type Job struct {
+	ID             string         `json:"id"`
+	ProjectID      string         `json:"project_id"`
+	Platform       string         `json:"platform"`
+	AccountID      string         `json:"account_id"`
+	MediaRef       string         `json:"media_ref"`
+	Payload        map[string]any `json:"payload"`
+	IdempotencyKey string         `json:"idempotency_key"`
+	Status         JobStatus      `json:"status"`
+	ErrorCode      string         `json:"error_code,omitempty"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type CreateJobRequest struct {
+	Platform       string         `json:"platform"`
+	AccountID      string         `json:"account_id"`
+	MediaRef       string         `json:"media_ref"`
+	Payload        map[string]any `json:"payload"`
+	IdempotencyKey string         `json:"idempotency_key"`
+}
+
+type Store struct {
+	mu   sync.RWMutex
+	path string
+	jobs map[string]Job
+}
+
+var (
+	)
 	errorCodePattern = regexp.MustCompile(`^[a-z0-9_]{1,80}$`)
 	projectTokens   map[string]string
 	projectAccounts map[string]map[string]bool
@@ -230,7 +365,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	project := parts[4]
-	if !idPattern.MatchString(project) {
+	if !pathIDPattern.MatchString(project) {
 		writeError(w, http.StatusBadRequest, "invalid_project_id", "invalid project id")
 		return
 	}
@@ -308,7 +443,7 @@ func (a *API) createJob(w http.ResponseWriter, r *http.Request, project string) 
 		writeError(w, http.StatusForbidden, "account_not_assigned", "target account is not assigned to this project")
 		return
 	}
-	if !idPattern.MatchString(req.AccountID) || !idPattern.MatchString(req.MediaRef) || !idPattern.MatchString(req.IdempotencyKey) {
+	if !pathIDPattern.MatchString(req.AccountID) || !idPattern.MatchString(req.MediaRef) || !idPattern.MatchString(req.IdempotencyKey) {
 		writeError(w, http.StatusBadRequest, "invalid_fields", "account_id, media_ref and idempotency_key must be valid identifiers")
 		return
 	}
@@ -491,7 +626,7 @@ func loadProjectTokens() (map[string]string, error) {
 		return nil, errors.New("at least one project token is required")
 	}
 	for project, token := range tokens {
-		if !idPattern.MatchString(project) || len(token) < 32 {
+		if !pathIDPattern.MatchString(project) || len(token) < 32 {
 			return nil, fmt.Errorf("project %q has invalid id or token shorter than 32 characters", project)
 		}
 	}
@@ -509,12 +644,12 @@ func loadProjectAccounts() (map[string]map[string]bool, error) {
 	}
 	accounts := make(map[string]map[string]bool, len(source))
 	for project, ids := range source {
-		if !idPattern.MatchString(project) || len(ids) == 0 {
+		if !pathIDPattern.MatchString(project) || len(ids) == 0 {
 			return nil, fmt.Errorf("project %q must have a valid id and at least one account", project)
 		}
 		accounts[project] = make(map[string]bool, len(ids))
 		for _, id := range ids {
-			if !idPattern.MatchString(id) {
+			if !pathIDPattern.MatchString(id) {
 				return nil, fmt.Errorf("project %q has invalid account id %q", project, id)
 			}
 			accounts[project][id] = true
