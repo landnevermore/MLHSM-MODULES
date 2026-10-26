@@ -49,12 +49,12 @@ func TestProjectTokenCannotReadAnotherProject(t *testing.T) {
 	if w.Code != http.StatusForbidden { t.Fatalf("status = %d, want 403", w.Code) }
 }
 
-func TestPublishingFailsClosedWithoutAdapter(t *testing.T) {
+func TestPublishingUnknownJobIsNotStarted(t *testing.T) {
 	api := testAPI(t)
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/social-uploader/projects/rapitup/jobs/suj_123:publish", nil)
 	r.Header.Set("X-Social-Uploader-Project-Token", "rapitup-test-token-0123456789012345")
 	w := httptest.NewRecorder(); api.ServeHTTP(w,r)
-	if w.Code != http.StatusNotImplemented { t.Fatalf("status = %d, want 501", w.Code) }
+	if w.Code != http.StatusNotFound { t.Fatalf("status = %d, want 404", w.Code) }
 }
 
 func TestPublishingStateBecomesUnknownOnRestart(t *testing.T) {
