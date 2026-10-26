@@ -1,0 +1,161 @@
+name: Release external module
+
+on:
+  push:
+    tags:
+      - "module-*-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag: module-<module-id>-v<version>"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: module-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: meta
+        shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          TAG="${INPUT_TAG:-$REF_NAME}"
+          python3 - "$TAG" >> "$GITHUB_OUTPUT" <<'PY'
+          import re, sys
+          tag = sys.argv[1]
+          match = re.fullmatch(r"module-([a-z][a-z0-9]*(?:-[a-z0-9]+)*)-v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)", tag)
+          if not match:
+              raise SystemExit(f"Invalid tag {tag!r}; expected module-<module-id>-v<semver>")
+          print(f"tag={tag}")
+          print(f"id={match.group(1)}")
+          print(f"version={match.group(2)}")
+          PY
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.meta.outputs.tag }}
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: modules/${{ steps.meta.outputs.id }}/go.mod
+          cache: true
+          cache-dependency-path: modules/${{ steps.meta.outputs.id }}/go.sum
+
+      - name: Validate source and manifest
+        env:
+          MODULE_ID: ${{ steps.meta.outputs.id }}
+          MODULE_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          test -f "modules/$MODULE_ID/go.mod"
+          test -f "modules/$MODULE_ID/module.json"
+          python3 - <<'PY'
+          import json, os, sys
+          p = f"modules/{os.environ['MODULE_ID']}/module.json"
+          m = json.load(open(p, encoding="utf-8"))
+          if m.get("id") != os.environ["MODULE_ID"]:
+              sys.exit(f"{p}: id does not match tag")
+          if m.get("version") != os.environ["MODULE_VERSION"]:
+              sys.exit(f"{p}: version does not match tag")
+          if m.get("origin") != "external":
+              sys.exit(f"{p}: origin must be external")
+          entry = m.get("entry", {})
+          if not entry.get("command") or "/" in entry["command"] or "\\" in entry["command"]:
+              sys.exit(f"{p}: entry.command must be a bare executable name")
+          if not m.get("route_prefixes"):
+              sys.exit(f"{p}: external modules need route_prefixes")
+          PY
+          cd "modules/$MODULE_ID"
+          go test ./...
+          go vet ./...
+
+      - name: Build and package Linux x86_64
+        env:
+          MODULE_ID: ${{ steps.meta.outputs.id }}
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE/modules/$MODULE_ID"
+          WORK="$RUNNER_TEMP/module-package"
+          mkdir -p "$WORK/runtime"
+          cd "$ROOT"
+          BIN="$(python3 -c 'import json; print(json.load(open("module.json"))["entry"]["command"])')"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$WORK/runtime/$BIN" .
+          cp module.json "$WORK/module.json"
+          cd "$WORK"
+          tar -czf "$GITHUB_WORKSPACE/$MODULE_ID-linux-x86_64.tar.gz" module.json runtime
+          cd "$GITHUB_WORKSPACE"
+          sha256sum "$MODULE_ID-linux-x86_64.tar.gz" > "$MODULE_ID-linux-x86_64.tar.gz.sha256"
+          stat -c '%s' "$MODULE_ID-linux-x86_64.tar.gz" > "$MODULE_ID-linux-x86_64.tar.gz.size"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          MODULE_ID: ${{ steps.meta.outputs.id }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            "$MODULE_ID-linux-x86_64.tar.gz" \
+            "$MODULE_ID-linux-x86_64.tar.gz.sha256" \
+            --title "$MODULE_ID $TAG" \
+            --notes "Automated MLHSM external module release. Linux x86_64."
+
+      - name: Publish artifact metadata to the central registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODULE_ID: ${{ steps.meta.outputs.id }}
+          MODULE_VERSION: ${{ steps.meta.outputs.version }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ASSET="$MODULE_ID-linux-x86_64.tar.gz"
+          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ASSET"
+          SHA="$(cut -d ' ' -f 1 "$ASSET.sha256")"
+          SIZE="$(cat "$ASSET.size")"
+          git fetch origin main
+          git switch --create release-metadata origin/main
+          python3 - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          module_id = os.environ["MODULE_ID"]
+          version = os.environ["MODULE_VERSION"]
+          tag = os.environ["TAG"]
+          asset = f"{module_id}-linux-x86_64.tar.gz"
+          url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{tag}/{asset}"
+          sha = Path(f"{asset}.sha256").read_text().split()[0]
+          size = int(Path(f"{asset}.size").read_text().strip())
+          manifest_path = Path("modules") / module_id / "module.json"
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          if manifest.get("version") != version:
+              sys.exit(f"{manifest_path}: main version is not {version}; publish source to main before tagging")
+          manifest["artifact"] = {"tag": tag, "asset": asset, "url": url, "sha256": sha, "size": size}
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          registry_path = Path("registry.json")
+          registry = json.loads(registry_path.read_text(encoding="utf-8"))
+          entry = next((m for m in registry["modules"] if m["id"] == module_id), None)
+          if entry is None:
+              sys.exit(f"{module_id} is not listed in registry.json")
+          entry["version"] = version
+          entry["manifest"] = f"modules/{module_id}/module.json"
+          entry["release"] = {"tag": tag, "asset": asset, "url": url, "sha256": sha, "size": size}
+          from datetime import datetime, timezone
+          registry["updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+          registry_path.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "modules/$MODULE_ID/module.json" registry.json
+          git commit -m "chore(registry): publish $MODULE_ID $MODULE_VERSION artifact"
+          git push origin HEAD:main

@@ -1,8 +1,5 @@
 name: validate-registry
 
-# Runs on every pull request that touches the registry, and on push to main.
-# An invalid module must fail here, before a maintainer ever reviews it - the
-# review is for judgement, this is for mechanical correctness.
 on:
   pull_request:
     paths:
@@ -10,7 +7,8 @@ on:
       - "modules/**"
       - "schema/**"
       - "scripts/**"
-      - ".github/workflows/validate-registry.yml"
+      - "templates/**"
+      - ".github/workflows/**"
   push:
     branches: [main]
   workflow_dispatch:
@@ -22,22 +20,29 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: Validate registry and manifests
         run: python scripts/validate_registry.py
-
       - name: Schemas are valid JSON
         run: |
-          for f in registry.json schema/*.json modules/*/module.json; do
-            echo "  checking $f"
-            python -c "import json,sys; json.load(open('$f'))" || exit 1
-          done
-
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          paths = [Path("registry.json"), *Path("schema").glob("*.json"),
+                   *Path("modules").glob("*/module.json"),
+                   *Path("templates").glob("**/*.json")]
+          for p in paths:
+              json.loads(p.read_text(encoding="utf-8"))
+              print(f"valid JSON: {p}")
+          PY
+      - name: Validate template Go module
+        working-directory: templates/go-module
+        run: |
+          go test ./...
+          go vet ./...
       - name: Registry paths exist
         run: |
           python - <<'PY'
@@ -57,12 +62,11 @@ jobs:
               sys.exit(1)
           print("all referenced paths exist")
           PY
-
       - name: Report module count
         run: |
           python - <<'PY'
           import json
           reg = json.load(open("registry.json", encoding="utf-8"))
           ids = [m["id"] for m in reg["modules"]]
-          print(f"::notice title=Modules::" + f"{len(ids)} module(s): {', '.join(ids)}")
+          print(f"::notice title=Modules::{len(ids)} module(s): {', '.join(ids)}")
           PY

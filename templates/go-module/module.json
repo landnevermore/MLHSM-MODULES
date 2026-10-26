@@ -1,0 +1,29 @@
+{
+  "id": "example-module",
+  "name": "Example MLHSM Module",
+  "description": "Starter template for an external Go module.",
+  "author": "landnevermore",
+  "version": "0.1.0",
+  "origin": "external",
+  "architecture": "out-of-process",
+  "entry": {
+    "command": "example-module",
+    "args": [],
+    "protocol": "http",
+    "health_path": "/health",
+    "prefer_arg_port": false
+  },
+  "mlhsm": {
+    "min_version": "0.1.0",
+    "api": "mlhsm-module/1"
+  },
+  "permissions": [],
+  "provides": ["example-status"],
+  "owned_paths": [],
+  "database_tables": [],
+  "route_prefixes": ["/api/v1/example"],
+  "platform": {
+    "os": ["linux"],
+    "arch": ["x86_64"]
+  }
+}
