@@ -138,8 +138,10 @@ def run(args: argparse.Namespace) -> int:
                     emit("failed", "publish_button_not_found")
                     return 1
 
-                publish_button.click(timeout=10000)
+                # From this point onward, a timeout is ambiguous: the click may have
+                # reached TikTok even if Playwright does not receive a response.
                 publish_clicked = True
+                publish_button.click(timeout=10000)
 
                 # Publication may take a while; only mark success after an explicit
                 # UI confirmation. Otherwise the caller must reconcile manually.
