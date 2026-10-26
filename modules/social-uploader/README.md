@@ -17,6 +17,7 @@ A self-hosted publishing queue service packaged and released from the central `M
 - `MLHSM_MODULE_PORT`: required loopback port provided by MLHSM.
 - `SOCIAL_UPLOADER_PROJECT_TOKENS`: required JSON object mapping project IDs to unique tokens. Each token must contain at least 32 characters. Keep tokens in host secret configuration; never commit real tokens.
 - `SOCIAL_UPLOADER_PROJECT_ACCOUNTS`: required JSON object mapping project IDs to the exact allowed account IDs for that project.
+- `SOCIAL_UPLOADER_PROJECT_ACCOUNTS`: required JSON object mapping project IDs to allowed account ID lists. This enforces account-level project separation.
 - `SOCIAL_UPLOADER_DATA_FILE`: optional queue-store path. Defaults to `data/modules/social-uploader/jobs.json`.
 
 Example token map for local development only:
