@@ -54,6 +54,20 @@
       }
     },
     "architecture": { "type": "string", "maxLength": 50 },
+    "canvas_regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "title", "slot", "order"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "slot": { "type": "string", "enum": ["main", "sidebar", "footer"] },
+          "order": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
     "artifact": {
       "description": "Installable release metadata consumed by MLHSM's RegistryRelease type. A missing artifact means metadata-only and is not installable.",
       "type": "object",

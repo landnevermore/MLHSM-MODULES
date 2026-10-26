@@ -38,6 +38,11 @@ jobs:
               json.loads(p.read_text(encoding="utf-8"))
               print(f"valid JSON: {p}")
           PY
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+          cache-dependency-path: templates/go-module/go.mod
       - name: Validate template Go module
         working-directory: templates/go-module
         run: |
