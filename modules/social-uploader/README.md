@@ -5,7 +5,7 @@ A self-hosted publishing queue service packaged and released from the central `M
 ## Current implementation
 
 - Durable JSON-backed job store with atomic replacement and restrictive file permissions.
-- Project-scoped bearer tokens; a token for one project cannot access another project's jobs.
+- Project-scoped tokens and per-project account allowlists; tokens and target accounts cannot cross project boundaries.
 - Publishing job snapshots include project, platform, target account, media reference, payload snapshot and idempotency key.
 - Duplicate requests with the same project + idempotency key return the existing job.
 - If the process restarts while a job is marked `publishing`, its status becomes `unknown`; it is not blindly retried.
@@ -15,7 +15,8 @@ A self-hosted publishing queue service packaged and released from the central `M
 ## Configuration
 
 - `MLHSM_MODULE_PORT`: required loopback port provided by MLHSM.
-- `SOCIAL_UPLOADER_PROJECT_TOKENS`: required JSON object mapping project IDs to unique bearer tokens. Each token must contain at least 32 characters. Keep tokens in the host's secret/credential configuration; never commit real tokens.
+- `SOCIAL_UPLOADER_PROJECT_TOKENS`: required JSON object mapping project IDs to unique tokens. Each token must contain at least 32 characters. Keep tokens in host secret configuration; never commit real tokens.
+- `SOCIAL_UPLOADER_PROJECT_ACCOUNTS`: required JSON object mapping project IDs to the exact allowed account IDs for that project.
 - `SOCIAL_UPLOADER_DATA_FILE`: optional queue-store path. Defaults to `data/modules/social-uploader/jobs.json`.
 
 Example token map for local development only:
@@ -26,7 +27,7 @@ Example token map for local development only:
 
 ## API
 
-All project endpoints require `Authorization: Bearer <project-token>`.
+All project endpoints require `X-Social-Uploader-Project-Token: <project-token>`. MLHSM's proxy strips standard `Authorization` and `Cookie` headers, so the module uses a dedicated header.
 
 - `GET /health`
 - `POST /api/v1/social-uploader/projects/{project}/jobs`
@@ -46,7 +47,7 @@ Example create request:
 }
 ```
 
-The caller must ensure that `account_id` belongs to the project whose token is used. The service enforces project-level data access, but does not yet maintain an account registry or independently validate platform ownership.
+The service checks `account_id` against the configured project allowlist. The allowlist is the boundary between Rap It Up, LYRICAMUNDO and other projects; platform ownership still needs to be verified when a real platform adapter is connected.
 
 ## Release
 
