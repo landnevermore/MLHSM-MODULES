@@ -2,7 +2,7 @@
   "id": "social-uploader",
   "name": "Social Uploader",
   "display_name": "Social Uploader",
-  "description": "Projektisolierte, persistente Publishing-Queue für Social-Media-Konten; Plattformadapter werden separat aktiviert.",
+  "description": "Projektisolierte Publishing-Queue mit lokalem TikTok-Studio-Browseradapter für Windows.",
   "author": "landnevermore",
   "version": "0.1.0",
   "category": "publishing",
@@ -37,13 +37,23 @@
     "publishing-queue",
     "project-isolation",
     "idempotent-job-creation",
-    "publishing-state-reconciliation"
+    "publishing-state-reconciliation",
+    "tiktok-browser-publishing",
+    "account-isolated-browser-profiles"
   ],
-  "owned_paths": ["jobs.json"],
+  "owned_paths": [
+    "jobs.json"
+  ],
   "database_tables": [],
-  "route_prefixes": ["/api/v1/social-uploader"],
+  "route_prefixes": [
+    "/api/v1/social-uploader"
+  ],
   "platform": {
-    "os": ["linux"],
-    "arch": ["x86_64"]
+    "os": [
+      "windows"
+    ],
+    "arch": [
+      "x86_64"
+    ]
   }
 }
