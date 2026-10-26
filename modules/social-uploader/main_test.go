@@ -67,3 +67,18 @@ func TestPublishingStateBecomesUnknownOnRestart(t *testing.T) {
 	got, ok := reopened.get("rapitup","suj_1")
 	if !ok || got.Status != StatusUnknown { t.Fatalf("got status %q, ok=%v", got.Status,ok) }
 }
+
+func TestPublishClaimIsAtomic(t *testing.T) {
+	store, err := openStore(filepath.Join(t.TempDir(), "jobs.json"))
+	if err != nil { t.Fatal(err) }
+	job, created, err := store.create("rapitup", CreateJobRequest{
+		Platform: "tiktok", AccountID: "account-1", MediaRef: "video.mp4",
+		Payload: map[string]any{"caption": "test"}, IdempotencyKey: "atomic-claim",
+	})
+	if err != nil || !created { t.Fatalf("create job: created=%v err=%v", created, err) }
+	claimed, ok, err := store.claim("rapitup", job.ID)
+	if err != nil || !ok || claimed.Status != StatusPublishing { t.Fatalf("first claim: job=%+v ok=%v err=%v", claimed, ok, err) }
+	_, ok, err = store.claim("rapitup", job.ID)
+	if err != nil { t.Fatal(err) }
+	if ok { t.Fatal("queued job was claimed twice") }
+}
