@@ -1,0 +1,49 @@
+{
+  "id": "social-uploader",
+  "name": "Social Uploader",
+  "display_name": "Social Uploader",
+  "description": "Projektisolierte, persistente Publishing-Queue für Social-Media-Konten; Plattformadapter werden separat aktiviert.",
+  "author": "landnevermore",
+  "version": "0.1.0",
+  "category": "publishing",
+  "origin": "external",
+  "architecture": "out-of-process",
+  "entry": {
+    "command": "social-uploader",
+    "args": [],
+    "protocol": "http",
+    "health_path": "/health",
+    "prefer_arg_port": false
+  },
+  "mlhsm": {
+    "min_version": "0.1.0",
+    "api": "mlhsm-module/1"
+  },
+  "dependencies": [],
+  "optional_dependencies": [],
+  "permissions": [
+    {
+      "id": "filesystem",
+      "description": "Persistiert Publishing-Jobs unter data/modules/social-uploader/.",
+      "required": true
+    },
+    {
+      "id": "network",
+      "description": "Stellt die lokale HTTP-API bereit und wird für Plattformadapter benötigt.",
+      "required": true
+    }
+  ],
+  "provides": [
+    "publishing-queue",
+    "project-isolation",
+    "idempotent-job-creation",
+    "publishing-state-reconciliation"
+  ],
+  "owned_paths": ["jobs.json"],
+  "database_tables": [],
+  "route_prefixes": ["/api/v1/social-uploader"],
+  "platform": {
+    "os": ["linux"],
+    "arch": ["x86_64"]
+  }
+}
