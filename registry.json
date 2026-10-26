@@ -1,6 +1,6 @@
 {
   "schema_version": "mlhsm-registry/1",
-  "updated_at": "2026-10-26T16:00:00Z",
+  "updated_at": "2026-10-26T19:45:00Z",
   "modules": [
     {
       "id": "mlgsm",
@@ -11,7 +11,10 @@
       "category": "gaming",
       "version": "0.1.0",
       "manifest": "modules/mlgsm/module.json",
-      "mlhsm": { "min_version": "0.1.0", "api": "mlhsm-module/1" }
+      "mlhsm": {
+        "min_version": "0.1.0",
+        "api": "mlhsm-module/1"
+      }
     },
     {
       "id": "modelmesh",
@@ -22,18 +25,24 @@
       "category": "ai",
       "version": "0.1.0",
       "manifest": "modules/modelmesh/module.json",
-      "mlhsm": { "min_version": "0.1.0", "api": "mlhsm-module/1" }
+      "mlhsm": {
+        "min_version": "0.1.0",
+        "api": "mlhsm-module/1"
+      }
     },
     {
       "id": "social-uploader",
       "name": "Social Uploader",
       "display_name": "Social Uploader",
-      "description": "Projektisolierte Publishing-Queue für Social-Media-Konten mit persistenter Jobverwaltung und sicherer Statusbehandlung.",
+      "description": "Projektisolierte Publishing-Queue mit lokalem TikTok-Studio-Browseradapter für Windows.",
       "author": "landnevermore",
       "category": "publishing",
       "version": "0.1.0",
       "manifest": "modules/social-uploader/module.json",
-      "mlhsm": { "min_version": "0.1.0", "api": "mlhsm-module/1" }
+      "mlhsm": {
+        "min_version": "0.1.0",
+        "api": "mlhsm-module/1"
+      }
     }
   ]
 }
