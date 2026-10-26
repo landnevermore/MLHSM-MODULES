@@ -48,6 +48,9 @@ jobs:
         run: |
           go test ./...
           go vet ./...
+      - name: Validate TikTok worker syntax
+        run: python -m py_compile modules/social-uploader/tiktok_worker.py
+
       - name: Validate Go module sources
         run: |
           set -euo pipefail
