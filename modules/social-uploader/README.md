@@ -1,13 +1,13 @@
 # Social Uploader (MLHSM external module)
 
-A self-hosted publishing queue service packaged from the central `MLHSM-MODULES` repository. The Go service exposes the MLHSM module API; TikTok publishing is delegated to a local Python/Playwright worker.
+A self-hosted publishing queue service packaged from the central `MLHSM-MODULES` repository. The Go service exposes the MLHSM module API; TikTok publishing is delegated to a local Python worker using Camoufox with the Playwright API.
 
 ## Current capabilities
 
 - Durable JSON-backed queue with atomic file replacement and restrictive file permissions.
 - Project-scoped tokens and per-project account allowlists; tokens and target accounts cannot cross project boundaries.
 - Idempotent job creation and an atomic `queued -> publishing` claim so the same job cannot start two browser sessions.
-- A visible Chromium browser profile per project/account, persisted under the module data directory.
+- A visible Camoufox/Firefox browser profile per project/account, persisted under the module data directory.
 - TikTok Studio upload flow for local video files and captions.
 - Explicit status handling: `succeeded` only after an observed success message; uncertain post-submit outcomes become `unknown` and are never retried automatically.
 - If the process restarts while a job is `publishing`, its status becomes `unknown`.
@@ -21,14 +21,14 @@ Requirements on the MLHSM host:
 
 - Go-built `social-uploader` executable.
 - Python 3.10+.
-- Python dependency: `playwright`.
-- Playwright Chromium browser installed for the same Python environment.
+- Python dependency: `camoufox` (which provides the compatible Playwright API).
+- The Camoufox browser build installed for the same Python environment.
 
 Install the worker dependencies from this directory:
 
 ```powershell
 python -m pip install -r requirements.txt
-python -m playwright install chromium
+python -m camoufox fetch
 ```
 
 On first publish, a visible browser opens for the configured account profile. If login or verification is requested, complete it manually. Separate profiles are created per project and account.
@@ -44,7 +44,7 @@ On first publish, a visible browser opens for the configured account profile. If
 - `SOCIAL_UPLOADER_TIKTOK_WORKER`: optional path to `tiktok_worker.py`.
 - `SOCIAL_UPLOADER_PYTHON`: optional Python executable. Defaults to `python` on Windows and `python3` elsewhere.
 - `SOCIAL_UPLOADER_TIKTOK_HEADLESS`: set to `true` only if a headless workflow is intentionally desired; visible mode is the default.
-- `SOCIAL_UPLOADER_TIKTOK_TIMEOUT_MS`: Playwright operation timeout; defaults to `120000`.
+- `SOCIAL_UPLOADER_TIKTOK_TIMEOUT_MS`: Browser operation timeout; defaults to `120000`.
 
 Example token map for local development only:
 
