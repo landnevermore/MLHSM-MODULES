@@ -95,70 +95,69 @@ def run(args: argparse.Namespace) -> int:
             headless=headless,
             locale="en-US",
         ) as context:
+            page = context.pages[0] if context.pages else context.new_page()
+            page.set_default_timeout(timeout_ms)
+            page.goto(UPLOAD_URL, wait_until="domcontentloaded", timeout=60000)
+
+            if not wait_for_upload_form(page, timeout_seconds=args.login_wait):
+                emit("failed", "login_or_verification_timeout")
+                return 1
+
+            file_input = page.locator('input[type="file"]').first
+            file_input.set_input_files(str(video), timeout=30000)
+
+            # Wait until upload/processing is no longer visibly in progress.
+            progress = page.locator('[role="progressbar"]')
             try:
-                page = context.pages[0] if context.pages else context.new_page()
-                page.set_default_timeout(timeout_ms)
-                page.goto(UPLOAD_URL, wait_until="domcontentloaded", timeout=60000)
+                progress.first.wait_for(state="hidden", timeout=180000)
+            except PlaywrightTimeout:
+                # TikTok often removes progress indicators rather than hiding them.
+                pass
 
-                if not wait_for_upload_form(page, timeout_seconds=args.login_wait):
-                    emit("failed", "login_or_verification_timeout")
-                    return 1
+            set_caption(page, args.caption)
 
-                file_input = page.locator('input[type="file"]').first
-                file_input.set_input_files(str(video), timeout=30000)
-
-                # Wait until upload/processing is no longer visibly in progress.
-                progress = page.locator('[role="progressbar"]')
+            # Only click an unambiguous publish action. Do not guess when UI labels
+            # have changed; return a clear error so the UI can be updated safely.
+            candidates = [
+                page.get_by_role("button", name=re.compile(r"^(post|publish)$", re.I)),
+                page.locator('button[data-e2e="post_video_button"]'),
+            ]
+            publish_button = None
+            for candidate in candidates:
                 try:
-                    progress.first.wait_for(state="hidden", timeout=180000)
-                except PlaywrightTimeout:
-                    # TikTok often removes progress indicators rather than hiding them.
-                    pass
+                    loc = candidate.first
+                    if loc.count() and loc.is_visible() and loc.is_enabled():
+                        publish_button = loc
+                        break
+                except Exception:
+                    continue
+            if publish_button is None:
+                emit("failed", "publish_button_not_found")
+                return 1
 
-                set_caption(page, args.caption)
+            # From this point onward, a timeout is ambiguous: the click may have
+            # reached TikTok even if Playwright does not receive a response.
+            publish_clicked = True
+            publish_button.click(timeout=10000)
 
-                # Only click an unambiguous publish action. Do not guess when UI labels
-                # have changed; return a clear error so the UI can be updated safely.
-                candidates = [
-                    page.get_by_role("button", name=re.compile(r"^(post|publish)$", re.I)),
-                    page.locator('button[data-e2e="post_video_button"]'),
-                ]
-                publish_button = None
-                for candidate in candidates:
-                    try:
-                        loc = candidate.first
-                        if loc.count() and loc.is_visible() and loc.is_enabled():
-                            publish_button = loc
-                            break
-                    except Exception:
+            # Publication may take a while; only mark success after an explicit
+            # UI confirmation. Otherwise the caller must reconcile manually.
+            deadline = time.monotonic() + args.publish_wait
+            while time.monotonic() < deadline:
+                try:
+                    body_text = page.locator("body").inner_text(timeout=3000)
+                    if SUCCESS_RE.search(body_text):
+                        emit("succeeded")
+                        return 0
+                    if CHALLENGE_RE.search(body_text):
+                        time.sleep(3)
                         continue
-                if publish_button is None:
-                    emit("failed", "publish_button_not_found")
-                    return 1
+                except Exception:
+                    pass
+                time.sleep(2)
 
-                # From this point onward, a timeout is ambiguous: the click may have
-                # reached TikTok even if Playwright does not receive a response.
-                publish_clicked = True
-                publish_button.click(timeout=10000)
-
-                # Publication may take a while; only mark success after an explicit
-                # UI confirmation. Otherwise the caller must reconcile manually.
-                deadline = time.monotonic() + args.publish_wait
-                while time.monotonic() < deadline:
-                    try:
-                        body_text = page.locator("body").inner_text(timeout=3000)
-                        if SUCCESS_RE.search(body_text):
-                            emit("succeeded")
-                            return 0
-                        if CHALLENGE_RE.search(body_text):
-                            time.sleep(3)
-                            continue
-                    except Exception:
-                        pass
-                    time.sleep(2)
-
-                emit("unknown", "publish_confirmation_not_observed")
-                return 2
+            emit("unknown", "publish_confirmation_not_observed")
+            return 2
     except Exception as exc:
         # Do not print exception strings: browser errors can contain sensitive URLs.
         emit("unknown" if publish_clicked else "failed",
