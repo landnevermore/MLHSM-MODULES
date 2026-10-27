@@ -50,6 +50,10 @@ jobs:
           go vet ./...
       - name: Validate TikTok worker syntax
         run: python -m py_compile modules/social-uploader/tiktok_worker.py
+      - name: Validate Camoufox Python API
+        run: |
+          python -m pip install -r modules/social-uploader/requirements.txt
+          python -c "from camoufox.sync_api import Camoufox; print(\"Camoufox import OK\")"
 
       - name: Validate Go module sources
         run: |
