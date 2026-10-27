@@ -117,7 +117,7 @@ jobs:
           set -euo pipefail
           NOTES="Automated MLHSM external module release."
           if [ "$MODULE_ID" = "social-uploader" ]; then
-            NOTES="$NOTES Windows x86_64; includes the Python Camoufox worker; install its browser with `python -m camoufox fetch` on the host."
+            NOTES="$NOTES Windows x86_64; includes the Python Camoufox worker. Install its browser on the host using python -m camoufox fetch."
           else
             NOTES="$NOTES Linux x86_64."
           fi
