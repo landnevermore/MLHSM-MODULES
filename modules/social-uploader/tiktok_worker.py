@@ -16,8 +16,8 @@ import sys
 import time
 from pathlib import Path
 
+from camoufox.sync_api import Camoufox
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
-from playwright.sync_api import sync_playwright
 
 UPLOAD_URL = "https://www.tiktok.com/tiktokstudio/upload"
 SUCCESS_RE = re.compile(
@@ -89,14 +89,12 @@ def run(args: argparse.Namespace) -> int:
 
     publish_clicked = False
     try:
-        with sync_playwright() as p:
-            context = p.chromium.launch_persistent_context(
-                user_data_dir=str(profile),
-                headless=headless,
-                viewport={"width": 1440, "height": 1000},
-                locale="en-US",
-                accept_downloads=False,
-            )
+        with Camoufox(
+            persistent_context=True,
+            user_data_dir=str(profile),
+            headless=headless,
+            locale="en-US",
+        ) as context:
             try:
                 page = context.pages[0] if context.pages else context.new_page()
                 page.set_default_timeout(timeout_ms)
@@ -161,8 +159,6 @@ def run(args: argparse.Namespace) -> int:
 
                 emit("unknown", "publish_confirmation_not_observed")
                 return 2
-            finally:
-                context.close()
     except Exception as exc:
         # Do not print exception strings: browser errors can contain sensitive URLs.
         emit("unknown" if publish_clicked else "failed",
